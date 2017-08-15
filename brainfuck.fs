@@ -20,8 +20,6 @@ type Program = Program of AST list
 type VM = {
     memory: int array;
     mutable memoryPtr: int;
-    mutable input: int list;
-    mutable output: string;
 }
 
 let parseSyntax source =
@@ -88,16 +86,11 @@ let buildProgram source =
     |> optimise
     |> Program
 
-let buildVM =
-    {
+let exec program memoryWatch getChar putChar =
+    let vm = {
         memory = Array.zeroCreate 30000;
         memoryPtr = 0;
-        input = [];
-        output = "";
     }
-
-
-let exec program vm =
 
     let rec run commands vm =
         match commands with
@@ -105,21 +98,23 @@ let exec program vm =
                 match command with
                     | ModMemPtr v ->
                         vm.memoryPtr <- (vm.memoryPtr + v + vm.memory.Length) % vm.memory.Length
+                        memoryWatch vm.memory
                         run commands vm
                     | ModMem v ->
                         vm.memory.[vm.memoryPtr] <- (vm.memory.[vm.memoryPtr] + v + 256) % 256
+                        memoryWatch vm.memory
                         run commands vm
                     | SetMem v ->
                         vm.memory.[vm.memoryPtr] <- (v + 256) % 256
+                        memoryWatch vm.memory
                         run commands vm
                     | IOCall ioCall ->
                         match ioCall with
                             | IOCall.PutChar ->
                                 let asciiCode = char vm.memory.[vm.memoryPtr]
-                                vm.output <- vm.output + (string) asciiCode
-                                Console.Write asciiCode
+                                putChar asciiCode
                             | IOCall.GetChar ->
-                                vm.memory.[vm.memoryPtr] <- Console.ReadKey().KeyChar |> System.Char.GetNumericValue |> int
+                                vm.memory.[vm.memoryPtr] <- getChar ()
                         run commands vm
                     | Loop loopCommands ->
                         match vm.memory.[vm.memoryPtr] with
@@ -131,3 +126,8 @@ let exec program vm =
 
     let (Program commands) = program;
     run commands vm
+
+let execNoWatch program getChar putChar =
+    let noWatch a =
+        ()
+    exec program noWatch getChar putChar
