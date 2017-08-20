@@ -168,6 +168,4 @@ let main argv =
 
     duration ( fun() -> run vm getChar putChar) |> ignore
 
-    //duration ( fun() -> execNoWatch program getChar putChar) |> ignore
-
     0 // return an integer exit code
