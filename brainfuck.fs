@@ -131,7 +131,7 @@ let createVM program =
         memoryPtr = 0;
     }
 
-let runOne (vm: VMState) =
+let runOne vm getChar putChar =
     let op = vm.program.[vm.programPtr]
     match op with
     | VMOp.ModMemPtr n ->
@@ -147,10 +147,9 @@ let runOne (vm: VMState) =
         match ioCall with
         | IOCall.PutChar ->
             let asciiCode = char vm.memory.[vm.memoryPtr]
-            Console.Write asciiCode
+            putChar asciiCode
         | IOCall.GetChar ->
-            ()
-            // vm.memory.[vm.memoryPtr] <- getChar ()
+            vm.memory.[vm.memoryPtr] <- getChar ()
         vm.programPtr <- vm.programPtr + 1
     | VMOp.JumpIfNotZero l ->
         match vm.memory.[vm.memoryPtr] with
@@ -165,52 +164,6 @@ let runOne (vm: VMState) =
             | _ ->
                 vm.programPtr <- vm.programPtr + 1
 
-let run vmState =
+let run vmState getChar putChar =
     while vmState.programPtr < vmState.program.Length do
-        runOne vmState
-
-// let exec program memoryWatch getChar putChar =
-//     let vm = {
-//         memory = Array.zeroCreate 30000;
-//         memoryPtr = 0;
-//     }
-
-//     let rec run commands vm =
-//         match commands with
-//             | command :: commands ->
-//                 match command with
-//                     | ModMemPtr v ->
-//                         vm.memoryPtr <- (vm.memoryPtr + v + vm.memory.Length) % vm.memory.Length
-//                         memoryWatch vm.memory
-//                         run commands vm
-//                     | ModMem v ->
-//                         vm.memory.[vm.memoryPtr] <- (vm.memory.[vm.memoryPtr] + v + 256) % 256
-//                         memoryWatch vm.memory
-//                         run commands vm
-//                     | SetMem v ->
-//                         vm.memory.[vm.memoryPtr] <- (v + 256) % 256
-//                         memoryWatch vm.memory
-//                         run commands vm
-//                     | IOCall ioCall ->
-//                         match ioCall with
-//                             | IOCall.PutChar ->
-//                                 let asciiCode = char vm.memory.[vm.memoryPtr]
-//                                 putChar asciiCode
-//                             | IOCall.GetChar ->
-//                                 vm.memory.[vm.memoryPtr] <- getChar ()
-//                         run commands vm
-//                     | Loop loopCommands ->
-//                         match vm.memory.[vm.memoryPtr] with
-//                             | 0 ->
-//                                 run commands vm
-//                             | _ ->
-//                                 run (loopCommands @ command :: commands) vm
-//             | [] -> ()
-
-//     let (Program commands) = program;
-//     run commands vm
-
-// let execNoWatch program getChar putChar =
-//     let noWatch a =
-//         ()
-//     exec program noWatch getChar putChar
+        runOne vmState getChar putChar
