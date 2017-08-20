@@ -166,7 +166,7 @@ let main argv =
 
     printfn "Starting brainfuck VM"
 
-    duration ( fun() -> run vmState ) |> ignore
+    duration ( fun() -> run vm ) |> ignore
 
     //duration ( fun() -> execNoWatch program getChar putChar) |> ignore
 
