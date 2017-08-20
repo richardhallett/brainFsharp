@@ -3,16 +3,17 @@ open System
 open System.IO
 
 // The type of IO call
-type IOCall =
+type SysCall =
     | PutChar
     | GetChar
+    | Stop
 
 // The commands that are possible
 type AST =
     | ModMemPtr of int// <>
     | ModMem of int // +-
     | SetMem of int // For optimised set
-    | IOCall of IOCall // .,
+    | SysCall of SysCall // .,
     | Loop of AST list// []
 
 // The OPS The VM understands
@@ -20,7 +21,7 @@ type VMOp =
     | ModMemPtr of int
     | ModMem of int
     | SetMem of int
-    | IOCall of IOCall
+    | SysCall of SysCall
     | JumpIfNotZero of int
     | JumpIfZero of int
 
@@ -30,6 +31,8 @@ type VMState = {
     mutable programPtr: int;
     memory: int array;
     mutable memoryPtr: int;
+    mutable output: string;
+    mutable input: string;
 }
 
 let parseSyntax source =
@@ -41,8 +44,8 @@ let parseSyntax source =
                         | '-' -> AST.ModMem -1 :: currentBlock, blockStack
                         | '>' -> AST.ModMemPtr +1 :: currentBlock, blockStack
                         | '<' -> AST.ModMemPtr -1 :: currentBlock, blockStack
-                        | ',' -> AST.IOCall IOCall.GetChar :: currentBlock, blockStack
-                        | '.' -> AST.IOCall IOCall.PutChar :: currentBlock, blockStack
+                        | ',' -> AST.SysCall SysCall.GetChar :: currentBlock, blockStack
+                        | '.' -> AST.SysCall SysCall.PutChar :: currentBlock, blockStack
                         | '[' -> [], currentBlock :: blockStack
                         | ']' ->
                             match blockStack with
@@ -102,7 +105,7 @@ let buildProgram source =
         | AST.ModMem n -> [ VMOp.ModMem n ]
         | AST.ModMemPtr n -> [ VMOp.ModMemPtr n ]
         | AST.SetMem n -> [ VMOp.SetMem n ]
-        | AST.IOCall c -> [ VMOp.IOCall c ]
+        | AST.SysCall c -> [ VMOp.SysCall c ]
         | AST.Loop loopList ->
             let loop = loopList |> List.collect translateOp
             let endJump = VMOp.JumpIfZero (loop.Length + 2)
@@ -129,10 +132,26 @@ let createVM program =
         programPtr = 0;
         memory = Array.zeroCreate 30000;
         memoryPtr = 0;
+        output = "";
+        input = "";
     }
 
-let runOne vm getChar putChar =
-    let op = vm.program.[vm.programPtr]
+let writeInput vm input =
+    vm.input <- input
+
+let readOutput vm =
+    let output = vm.output
+    vm.output <- ""
+    output
+
+let runOne vm =
+
+    let op =
+        match vm.programPtr with
+        | e when e >= vm.program.Length ->
+            SysCall Stop
+        | e -> vm.program.[vm.programPtr]
+
     match op with
     | VMOp.ModMemPtr n ->
         vm.memoryPtr <- (vm.memoryPtr + n + vm.memory.Length) % vm.memory.Length
@@ -142,14 +161,6 @@ let runOne vm getChar putChar =
         vm.programPtr <- vm.programPtr + 1
     | VMOp.SetMem n ->
         vm.memory.[vm.memoryPtr] <- (n + 256) % 256
-        vm.programPtr <- vm.programPtr + 1
-    | VMOp.IOCall ioCall ->
-        match ioCall with
-        | IOCall.PutChar ->
-            let asciiCode = char vm.memory.[vm.memoryPtr]
-            putChar asciiCode
-        | IOCall.GetChar ->
-            vm.memory.[vm.memoryPtr] <- getChar ()
         vm.programPtr <- vm.programPtr + 1
     | VMOp.JumpIfNotZero l ->
         match vm.memory.[vm.memoryPtr] with
@@ -163,7 +174,19 @@ let runOne vm getChar putChar =
                 vm.programPtr <- l
             | _ ->
                 vm.programPtr <- vm.programPtr + 1
+    | VMOp.SysCall sysCall ->
+        match sysCall with
+        | SysCall.PutChar ->
+            let asciiCode = char vm.memory.[vm.memoryPtr]
+            vm.output <- vm.output + string asciiCode
+        | SysCall.GetChar ->
+            let nextChar = vm.input.Chars 0
+            vm.input <- vm.input.Remove(0,1)
+            vm.memory.[vm.memoryPtr] <- int nextChar
+        | SysCall.Stop ->
+            vm.memoryPtr <- vm.memory.Length
+        vm.programPtr <- vm.programPtr + 1
 
-let run vmState getChar putChar =
+let runAll vmState =
     while vmState.programPtr < vmState.program.Length do
-        runOne vmState getChar putChar
+        runOne vmState
