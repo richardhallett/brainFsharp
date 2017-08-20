@@ -150,6 +150,7 @@ let main argv =
     <<<<<]]>>>]"
 
     let program = buildProgram mandleBrot
+    let vm = createVM program;
 
     let duration f =
         let timer = new System.Diagnostics.Stopwatch()
@@ -165,6 +166,8 @@ let main argv =
 
     printfn "Starting brainfuck VM"
 
-    duration ( fun() -> execNoWatch program getChar putChar) |> ignore
+    duration ( fun() -> run vmState ) |> ignore
+
+    //duration ( fun() -> execNoWatch program getChar putChar) |> ignore
 
     0 // return an integer exit code
