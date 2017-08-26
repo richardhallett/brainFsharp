@@ -7,7 +7,8 @@ is a pretty good language for this.
 Steps:
 1. Construct a basic AST from the instruction set
 2. Optimise the AST so it's not quite as slow
-3. Run through all the commands recursively performing appropriate actions
+3. Build a more VM friendly instruction set (i.e. get rid of recrusive structure of the AST and use jump conditions instead)
+4. Run through all the VM commands performing appropriate action.
 
 I built it on top of dotnet core so if you want to run it just ensure you have both dotnet and the F# SDK and do a *dotnet run*
 
